@@ -1,5 +1,6 @@
 var express = require('express');
 var request = require('request');
+var fs = require('fs');
 var app = express();
 
 app.get('/v3/*', function(req, res) {
@@ -12,9 +13,26 @@ app.get('/tiles/*', function (req, res) {
   var y = path.pop().split('.')[0];
   var x = path.pop();
   var z = path.pop();
-  //z = 16;
-  var image_url = "https://api.mapbox.com/styles/v1/nealf/cirtivc6j000lg9kw0ew99cdx/tiles/256/"+z+"/"+x+"/"+y+"?access_token=pk.eyJ1IjoibmVhbGYiLCJhIjoiNmM4MGQ3M2UzNmVlMTY0OWNmZDhiZjk0YWZlYzQ4OTYifQ.VEiV66Tl7sjD5n-bDLjbhw";
-  request.get(image_url).pipe(res);
+  
+  var localFile = 'tiles/'+z+x+y+'.png'
+  fs.stat(localFile, function(err, data) {
+    if (err) {
+      console.log('Caching the file ' + localFile);
+      var image_url = "https://api.mapbox.com/styles/v1/nealf/cirtivc6j000lg9kw0ew99cdx/tiles/256/"+z+"/"+x+"/"+y+"?access_token=pk.eyJ1IjoibmVhbGYiLCJhIjoiNmM4MGQ3M2UzNmVlMTY0OWNmZDhiZjk0YWZlYzQ4OTYifQ.VEiV66Tl7sjD5n-bDLjbhw";
+      var cachedFile = request.get(image_url).pipe(fs.createWriteStream('tiles/'+z+x+y+'.png'));
+      cachedFile.on('finish', function() {
+        fs.createReadStream(localFile).pipe(res);
+      });
+      //res.send("Done");
+    } else { 
+      console.log('Using cached file ' + localFile);
+      fs.createReadStream(localFile).pipe(res);
+    }
+  });
+
+  
+
+  
 });
 
 app.listen(3000, function () {
